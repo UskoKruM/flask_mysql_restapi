@@ -1,28 +1,33 @@
 from flask import Flask, jsonify, request
 from flask_mysqldb import MySQL
+from flask_cors import CORS, cross_origin
 
 from config import config
 from validaciones import *
 
 app = Flask(__name__)
 
+# CORS(app)
+CORS(app, resources={r"/cursos/*": {"origins": "http://localhost"}})
+
 conexion = MySQL(app)
 
 
+# @cross_origin
 @app.route('/cursos', methods=['GET'])
 def listar_cursos():
     try:
         cursor = conexion.connection.cursor()
-        sql = "SELECT codigo, nombre, creditos FROM curso"
+        sql = "SELECT codigo, nombre, creditos FROM curso ORDER BY nombre ASC"
         cursor.execute(sql)
         datos = cursor.fetchall()
         cursos = []
         for fila in datos:
             curso = {'codigo': fila[0], 'nombre': fila[1], 'creditos': fila[2]}
             cursos.append(curso)
-        return jsonify({'cursos': cursos, 'mensaje': "Cursos listados."})
+        return jsonify({'cursos': cursos, 'mensaje': "Cursos listados.", 'exito': True})
     except Exception as ex:
-        return jsonify({'mensaje': "Error"})
+        return jsonify({'mensaje': "Error", 'exito': False})
 
 
 def leer_curso_bd(codigo):
@@ -45,11 +50,11 @@ def leer_curso(codigo):
     try:
         curso = leer_curso_bd(codigo)
         if curso != None:
-            return jsonify({'curso': curso, 'mensaje': "Curso encontrado."})
+            return jsonify({'curso': curso, 'mensaje': "Curso encontrado.", 'exito': True})
         else:
-            return jsonify({'mensaje': "Curso no encontrado."})
+            return jsonify({'mensaje': "Curso no encontrado.", 'exito': False})
     except Exception as ex:
-        return jsonify({'mensaje': "Error"})
+        return jsonify({'mensaje': "Error", 'exito': False})
 
 
 @app.route('/cursos', methods=['POST'])
@@ -59,7 +64,7 @@ def registrar_curso():
         try:
             curso = leer_curso_bd(request.json['codigo'])
             if curso != None:
-                return jsonify({'mensaje': "Código ya existe, no se puede duplicar."})
+                return jsonify({'mensaje': "Código ya existe, no se puede duplicar.", 'exito': False})
             else:
                 cursor = conexion.connection.cursor()
                 sql = """INSERT INTO curso (codigo, nombre, creditos) 
@@ -67,11 +72,11 @@ def registrar_curso():
                                                      request.json['nombre'], request.json['creditos'])
                 cursor.execute(sql)
                 conexion.connection.commit()  # Confirma la acción de inserción.
-                return jsonify({'mensaje': "Curso registrado."})
+                return jsonify({'mensaje': "Curso registrado.", 'exito': True})
         except Exception as ex:
-            return jsonify({'mensaje': "Error"})
+            return jsonify({'mensaje': "Error", 'exito': False})
     else:
-        return jsonify({'mensaje': "Parámetros inválidos..."})
+        return jsonify({'mensaje': "Parámetros inválidos...", 'exito': False})
 
 
 @app.route('/cursos/<codigo>', methods=['PUT'])
@@ -85,13 +90,13 @@ def actualizar_curso(codigo):
                 WHERE codigo = '{2}'""".format(request.json['nombre'], request.json['creditos'], codigo)
                 cursor.execute(sql)
                 conexion.connection.commit()  # Confirma la acción de actualización.
-                return jsonify({'mensaje': "Curso actualizado."})
+                return jsonify({'mensaje': "Curso actualizado.", 'exito': True})
             else:
-                return jsonify({'mensaje': "Curso no encontrado."})
+                return jsonify({'mensaje': "Curso no encontrado.", 'exito': False})
         except Exception as ex:
-            return jsonify({'mensaje': "Error"})
+            return jsonify({'mensaje': "Error", 'exito': False})
     else:
-        return jsonify({'mensaje': "Parámetros inválidos..."})
+        return jsonify({'mensaje': "Parámetros inválidos...", 'exito': False})
 
 
 @app.route('/cursos/<codigo>', methods=['DELETE'])
@@ -103,11 +108,11 @@ def eliminar_curso(codigo):
             sql = "DELETE FROM curso WHERE codigo = '{0}'".format(codigo)
             cursor.execute(sql)
             conexion.connection.commit()  # Confirma la acción de eliminación.
-            return jsonify({'mensaje': "Curso eliminado."})
+            return jsonify({'mensaje': "Curso eliminado.", 'exito': True})
         else:
-            return jsonify({'mensaje': "Curso no encontrado."})
+            return jsonify({'mensaje': "Curso no encontrado.", 'exito': False})
     except Exception as ex:
-        return jsonify({'mensaje': "Error"})
+        return jsonify({'mensaje': "Error", 'exito': False})
 
 
 def pagina_no_encontrada(error):
